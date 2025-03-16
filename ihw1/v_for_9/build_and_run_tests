@@ -1,0 +1,43 @@
+#!/bin/bash
+
+FIFO_IN="/tmp/fifo_in"
+FIFO_OUT="/tmp/fifo_out"
+
+# Компиляция всех частей
+gcc reader.c -o reader
+gcc processor.c -o processor
+gcc writer.c -o writer
+
+# Создание FIFO (именованных каналов)
+mkfifo "$FIFO_IN"
+mkfifo "$FIFO_OUT"
+
+echo "Running tests..."
+
+tests=("test" "test1" "test2" "test3" "hard_test")
+
+for test in "${tests[@]}"; do
+    echo "Running test: $test"
+
+    # Запуск процессов с передачей аргументов
+    ./reader "tests/${test}.txt" "$FIFO_IN" "$FIFO_OUT" &
+    ./processor "$FIFO_IN" "$FIFO_OUT" &
+    ./writer "$FIFO_OUT" "out_${test}.txt" &
+
+    # Ожидание завершения всех процессов
+    wait
+
+    # Сравнение результатов
+    diff "out_${test}.txt" "tests/expected_${test}.txt" > /dev/null
+    if [ $? -eq 0 ]; then
+        echo "Test $test: PASSED"
+    else
+        echo "Test $test: FAILED"
+        diff "out_${test}.txt" "tests/expected_${test}.txt"
+    fi
+done
+
+# Очистка
+rm -f "$FIFO_IN" "$FIFO_OUT"
+
+echo "All tests completed!"

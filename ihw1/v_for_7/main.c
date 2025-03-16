@@ -55,21 +55,62 @@ ssize_t writeToFile(const char *path, const char *buffer, size_t size) {
     return written;
 }
 
-ssize_t findKeyWord(char* source, char* result) {
+int is_valid_separator(char c) {
+    return isspace(c) || c == '(' || c == ')' || c == '{' || c == '}' ||
+           c == ';' || c == ',' || c == '+' || c == '-' || c == '*' ||
+           c == '/' || c == '%' || c == '=' || c == '[' || c == ']' ||
+           c == '!' || c == '&' || c == '|' || c == '<' || c == '>' ||
+           c == '\0';
+}
+
+ssize_t findKeyWord(char *source, char *result) {
     char *keywords[] = {"int", "return", "char", "while", "for"};
     int counts[5] = {0};
 
-    char *word = strtok(source, " ,.!?;:\"(){}[]\n\t");
-    while (word != NULL) {
-        for (int i = 0; i < 5; i++) {
-            if (strcmp(word, keywords[i]) == 0) {
-                counts[i]++;
+    int in_string = 0;
+    int in_comment = 0;
+    char *ptr = source;
+
+    while (*ptr) {
+        if (*ptr == '"' && (ptr == source || *(ptr - 1) != '\\')) {
+            in_string = !in_string;
+        }
+
+        if (!in_string && *ptr == '/' && *(ptr + 1) == '/') {
+            while (*ptr && *ptr != '\n') ptr++;
+            continue;
+        }
+
+        if (!in_string && *ptr == '/' && *(ptr + 1) == '*') {
+            in_comment = 1;
+            ptr += 2;
+            while (*ptr && *ptr != '\0' && !( *ptr == '*' && *(ptr + 1) == '/')) ptr++;
+            if (*ptr && *(ptr + 1) == '/') {
+                in_comment = 0;
+                ptr+=2;
+                continue;
             }
         }
-        word = strtok(NULL, " ,.!?;:\"(){}[]\n\t");
+
+        if (!in_string && !in_comment) {
+            for (int i = 0; i < 5; i++) {
+                int len = strlen(keywords[i]);
+                if (strncmp(ptr, keywords[i], len) == 0) {
+                    char before = (ptr == source) ? ' ' : *(ptr - 1);
+                    char after = *(ptr + len);
+
+                    if (is_valid_separator(before) && is_valid_separator(after)) {
+                        counts[i]++;
+                        ptr += len;
+                        continue;
+                    }
+                }
+            }
+        }
+        ptr++;
     }
 
-    char temp[BUFFER_SIZE];
+    char temp[256];
     result[0] = '\0';
 
     for (int i = 0; i < 5; i++) {
