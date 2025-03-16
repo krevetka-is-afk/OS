@@ -1,20 +1,18 @@
 #!/bin/bash
 
-# Компиляция с проверкой ошибок
 gcc main.c -o main
 if [ $? -ne 0 ]; then
-    echo "Ошибка компиляции!"
+    echo "Compile error"
     exit 1
 fi
 
-# Директория с тестами
+wait
+
 TEST_DIR="tests"
 
-# Массив входных тестов и ожидаемых результатов
 tests=("test.txt" "test1.txt" "test2.txt" "test3.txt" "hard_test.txt")
 expected_outputs=("expected_test.txt" "expected_test1.txt" "expected_test2.txt" "expected_test3.txt" "expected_hard_test.txt")
 
-# Запуск тестов
 for i in "${!tests[@]}"; do
     input="$TEST_DIR/${tests[i]}"
     expected="$TEST_DIR/${expected_outputs[i]}"
@@ -23,7 +21,8 @@ for i in "${!tests[@]}"; do
     echo "Running test $((i+1)) → ${tests[i]}"
     ./main "$input" "$output"
 
-    # Сравнение с ожидаемым результатом
+    wait
+
     if diff -q "$output" "$expected" > /dev/null; then
         echo "Test $((i+1)) PASSED"
     else

@@ -1,35 +1,30 @@
 #!/bin/bash
 
-# Пути к именованным каналам
 FIFO_IN="/tmp/fifo_in"
 FIFO_OUT="/tmp/fifo_out"
 
-# Компиляция всех частей
 gcc reader.c -o reader
 gcc processor.c -o processor
 gcc writer.c -o writer
 
-# Создание FIFO (именованных каналов)
+wait
+
 mkfifo "$FIFO_IN"
 mkfifo "$FIFO_OUT"
 
 echo "Running tests..."
 
-# Массив с именами тестов
 tests=("test" "test1" "test2" "test3" "hard_test")
 
 for test in "${tests[@]}"; do
     echo "Running test: $test"
 
-    # Запуск процессов в фоне
     ./reader "tests/${test}.txt" "$FIFO_IN" &
     ./processor "$FIFO_IN" "$FIFO_OUT" &
     ./writer "$FIFO_OUT" "out_${test}.txt" &
 
-    # Ждем завершения всех процессов
     wait
 
-    # Сравниваем результат с эталонным файлом
     diff "out_${test}.txt" "tests/expected_${test}.txt" > /dev/null
     if [ $? -eq 0 ]; then
         echo "Test $test: PASSED"
@@ -39,7 +34,4 @@ for test in "${tests[@]}"; do
     fi
 done
 
-# Удаление FIFO
 rm -f "$FIFO_IN" "$FIFO_OUT"
-
-echo "All tests completed!"
