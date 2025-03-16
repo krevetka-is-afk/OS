@@ -1,11 +1,8 @@
 #!/bin/bash
 
-gcc main.c -o main
-if [ $? -ne 0 ]; then
-    echo "Compile error"
-    exit 1
-fi
+set -e
 
+gcc main.c -o main
 wait
 
 TEST_DIR="tests"
@@ -19,9 +16,16 @@ for i in "${!tests[@]}"; do
     output="out_${tests[i]}"
 
     echo "Running test $((i+1)) → ${tests[i]}"
+    rm -f first.fifo second.fifo "$output"
+    mkfifo first.fifo
+    mkfifo second.fifo
     ./main "$input" "$output"
-
     wait
+
+    if [ $? -ne 0 ]; then
+        echo "Test $((i+1)) FAILED: main exited with non-zero code"
+        continue
+    fi
 
     if diff -q "$output" "$expected" > /dev/null; then
         echo "Test $((i+1)) PASSED"
@@ -30,4 +34,5 @@ for i in "${!tests[@]}"; do
         echo "Diff:"
         diff "$output" "$expected"
     fi
+    rm -f first.fifo second.fifo
 done

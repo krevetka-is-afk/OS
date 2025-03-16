@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 FIFO_IN="/tmp/fifo_in"
 FIFO_OUT="/tmp/fifo_out"
 
@@ -9,6 +11,7 @@ gcc writer.c -o writer
 
 wait
 
+rm -f "$FIFO_IN" "$FIFO_OUT"
 mkfifo "$FIFO_IN"
 mkfifo "$FIFO_OUT"
 
@@ -19,11 +22,18 @@ tests=("test" "test1" "test2" "test3" "hard_test")
 for test in "${tests[@]}"; do
     echo "Running test: $test"
 
+    rm -f "out_${test}.txt"
+
     ./reader "tests/${test}.txt" "$FIFO_IN" &
     ./processor "$FIFO_IN" "$FIFO_OUT" &
     ./writer "$FIFO_OUT" "out_${test}.txt" &
 
     wait
+
+    if [ $? -ne 0 ]; then
+        echo "Test $test: FAILED: One or more processes exited with non-zero code"
+        continue
+    fi
 
     diff "out_${test}.txt" "tests/expected_${test}.txt" > /dev/null
     if [ $? -eq 0 ]; then
