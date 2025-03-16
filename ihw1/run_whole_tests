@@ -1,0 +1,27 @@
+#!/bin/bash
+
+echo "Running all tests..."
+
+for dir in v_for_*; do
+    if [ -d "$dir" ]; then
+        echo "Running tests in $dir..."
+        cd "$dir"
+
+        chmod +x ./build_and_run_tests
+
+        if [ -x ./build_and_run_tests ]; then
+            ./build_and_run_tests
+            if [ $? -ne 0 ]; then
+                echo "Tests in $dir failed!"
+            else
+                echo "Tests in $dir passed!"
+            fi
+        else
+            echo "Warning: No executable build_and_run_tests found in $dir"
+        fi
+
+        cd ..
+    fi
+done
+
+echo "All tests completed."
